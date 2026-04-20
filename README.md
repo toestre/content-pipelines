@@ -42,6 +42,10 @@ flowchart LR
 4. Output is assembled as a markdown file with YAML frontmatter (source URL, date, tags, original title)
 5. File is emailed to a configurable address
 
+### Screenshot of the n8n canvas
+
+![Article Translator workflow](assets/article-translation.png)
+
 ### Sample output
 
 See [`samples/article-output.md`](samples/article-output.md) for a real file this workflow produced.
@@ -87,6 +91,11 @@ Yellow = self-built microservices (see [Microservices](#microservices) below).
 7. Delivery branches on the form choice:
    - **Email** — transcript (`.md`), summary (`.md`), and summary (`.pdf`) as attachments
    - **Telegram** — summary PDF pushed to a configured chat via bot
+
+
+### Screenshot of the n8n canvas
+
+![Article Translator workflow](assets/sermon-transcription.png)
 
 ### Sample output
 
