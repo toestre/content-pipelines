@@ -107,7 +107,7 @@ Yellow = self-built microservices (see [Microservices](#microservices) below).
 
 ## Demo
 
-> 📹 **60-second walkthrough:** [Loom link](#) *(replace with your Loom URL)*
+> 📹 **60-second walkthrough:** [Article Translator workflow](https://github.com/user-attachments/assets/54b4831a-f4f1-4ae8-8e06-de47e7f60895)
 
 For the faster path, the samples above show exactly what comes out the other end.
 
