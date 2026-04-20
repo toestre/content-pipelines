@@ -1,0 +1,922 @@
+{
+  "name": "Transcribe and summarize sermons (DE)",
+  "nodes": [
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -48,
+        -80
+      ],
+      "id": "cbb459b8-e601-4fd7-ab18-ca0ccd1d733e",
+      "name": "Wait",
+      "webhookId": "29cbe5f6-7a23-4a9a-aa6e-57e442585def"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://audio-processor:8000/downsample",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "={{ $binary.audioFile }}"
+            },
+            {
+              "name": "output_filename",
+              "value": "={{ $json['audioFile'][0].filename.replace('.mp3', '_downsampled.mp3') }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "audioFileDownsampled"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -592,
+        -80
+      ],
+      "id": "f25e7c22-fe80-4619-bd50-911630efcad1",
+      "name": "Downsample file"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.infomaniak.com/1/ai/107345/openai/audio/transcriptions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "={{ $binary.audioFileDownsampled }}"
+            },
+            {
+              "name": "model",
+              "value": "whisper"
+            },
+            {
+              "name": "language",
+              "value": "={{ $json.language }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -256,
+        -80
+      ],
+      "id": "2aa03c33-9bcb-4c07-9fe5-887e107cbf35",
+      "name": "Send file to Whisper",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QfmXYwP8bAjXEM3P",
+          "name": "Infomaniak KI API Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.infomaniak.com/1/ai/107345/results/{{ $('Send file to Whisper').item.json.batch_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        144,
+        -80
+      ],
+      "id": "759119bc-dfa1-47e4-a3e4-b777664cbf2d",
+      "name": "Fetch transcription",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QfmXYwP8bAjXEM3P",
+          "name": "Infomaniak KI API Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Du bist ein theologisch gebildeter Assistent, der Predigten präzise und einfühlsam zusammenfasst. Du arbeitest ausschließlich mit dem bereitgestellten Transkript und fügst keine eigenen theologischen Deutungen hinzu.",
+              "role": "assistant"
+            },
+            {
+              "content": "=Erstelle eine strukturierte Zusammenfassung der folgenden Predigt.\n\n<dateiname>{{ $('Downsample file').item.json['audioFile'][0].filename }}</dateiname>\n\n## Anweisungen\n\n1. **Titel:** Verwende den Predigttitel als Überschrift (Markdown-H1). Gehe dabei wie folgt vor:\n   - Prüfe zuerst den Dateinamen im Tag <dateiname>. Wenn sich daraus ein sinnvoller Predigttitel ableiten lässt (z. B. nach Entfernen von Dateiendungen, Datumsangaben oder technischen Präfixen), verwende diesen als Titel.\n   - Falls der Dateiname keinen brauchbaren Titel enthält (z. B. nur eine ID, ein Datum oder ein generischer Name wie «audio_001.txt»), erzeuge einen prägnanten, inhaltlich passenden Titel aus dem Transkript.\n   - Der Titel sollte kurz sein (max. 8 Wörter) und den thematischen Kern der Predigt widerspiegeln.\n\n2. **Bibelstelle(n):** Nenne die zentrale(n) Bibelstelle(n), auf die sich die Predigt bezieht (Buch, Kapitel, Verse).\n\n3. **Kernbotschaft** (2–3 Sätze): Was ist die zentrale Aussage der Predigt? Formuliere so, dass jemand, der nicht dabei war, den roten Faden versteht.\n\n4. **Gedankengang** (5–8 Stichpunkte): Gib den Aufbau und die wesentlichen Argumentationsschritte der Predigt wieder — in der Reihenfolge, wie sie vorgetragen wurden.\n\n5. **Praktische Impulse**: Welche konkreten Handlungsaufforderungen oder Denkanstöße gibt der Prediger / die Predigerin den Zuhörern mit?\n\n6. **Zitate**: Gib bis zu 3 wörtliche Zitate aus der Predigt wieder, die besonders prägnant oder einprägsam sind. Kennzeichne sie mit Guillemets (» «).\n\n7. **Schlagwörter**: Liste 3–5 thematische Schlagwörter auf, die den Inhalt der Predigt beschreiben.\n\n## Regeln\n\n- Bleibe eng am Transkript. Interpretiere nicht über den Text hinaus.\n- Unterscheide klar zwischen dem, was der Prediger sagt, und Bibelzitaten.\n- Transkriptionsfehler (z. B. falsch erkannte Eigennamen, Bibelstellen) darfst du stillschweigend korrigieren, wenn du dir sicher bist.\n- Wenn das Transkript unverständliche Passagen enthält, kennzeichne sie mit [unverständlich].\n- Schreibe in einem sachlichen, aber wertschätzenden Ton."
+            },
+            {
+              "content": "=<transkript>\n{{ $json.transcript_de }}\n</transkript>"
+            },
+            {}
+          ]
+        },
+        "options": {
+          "maxTokens": 4096,
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        -96
+      ],
+      "id": "c7b5263d-95fd-4fb4-ba5e-aaf25e38304e",
+      "name": "Summarise",
+      "executeOnce": true,
+      "credentials": {
+        "anthropicApi": {
+          "id": "V22chuhf2A4iwgWk",
+          "name": "Anthropic API Key transcription workflow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "sendfrom@yourdomain.com",
+        "toEmail": "sendto@yourdomain.com",
+        "subject": "=Predigttranskript und -zusammenfassung {{ $('On form submission').item.json['Audio file'][0].filename.split('.')[0] }}",
+        "emailFormat": "text",
+        "text": "=Transkript und Zusammenfassung der Predigt aus der Aufnahme {{ $('On form submission').item.json['Audio file'][0].filename }}\n\n- Transkript (deutsch)\n- Zusammenfassung als Markdown\n- Zusammenfassung als PDF",
+        "options": {
+          "attachments": "attachment_0,attachment_1,attachment_2"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2448,
+        -96
+      ],
+      "id": "a27d2f2b-7a3c-4cbe-9716-e0a8142203b7",
+      "name": "Send summary as Markdown file",
+      "webhookId": "bbcf274f-03df-417a-bf80-99d6026ebdf6",
+      "credentials": {
+        "smtp": {
+          "id": "nTxNBakLMZ8ZoeSe",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ceff5677-d0a0-4f17-a7f2-6edcd11629fc",
+              "leftValue": "={{ $json.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        336,
+        -80
+      ],
+      "id": "08b2c32b-051a-4388-a53a-a17fd41b9bd4",
+      "name": "Check if data is empty"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41ee2584-bdf9-44e1-a1cb-1b83b5791450",
+              "leftValue": "={{ $('Downsample file').item.json.language }}",
+              "rightValue": "de",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        -96
+      ],
+      "id": "738d48a3-2cdd-4571-aa67-df35d669df79",
+      "name": "Language check",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-6"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Du bist ein erfahrener Übersetzer für christliche Predigten und theologische\nTexte. Du übersetzt vom Englischen ins Deutsche. Du kennst die gängige\ndeutschsprachige theologische Terminologie und orientierst dich bei\nBibelzitaten an der Lutherbibel (2017) bzw. der Elberfelder Übersetzung CSV Hückeswagen.",
+              "role": "assistant"
+            },
+            {
+              "content": "Übersetze das folgende Predigt-Transkript vom Englischen ins Deutsche.\n\n## Regeln\n\n- Übersetze den gesamten Text vollständig. Kürze oder fasse nichts zusammen.\n- Bewahre den Predigtstil: Wenn der Prediger umgangssprachlich spricht,\n  übersetze umgangssprachlich. Wenn er akademisch formuliert, übersetze\n  entsprechend.\n- Bibelzitate: Verwende die etablierte deutsche Übersetzung (bevorzugt\n  Lutherbibel 2017). Kennzeichne die Bibelstelle wie im Original angegeben.\n  Wenn du dir bei der Zuordnung unsicher bist, übernimm das Zitat in\n  eigener Übersetzung und markiere es mit [eigene Übersetzung].\n- Theologische Fachbegriffe: Verwende die im deutschen Sprachraum übliche\n  Terminologie (z. B. «justification» → «Rechtfertigung»,\n  «sanctification» → «Heiligung», «atonement» → «Sühne/Versöhnung»).\n- Eigennamen (Personen, Orte, Gemeinden) bleiben unverändert.\n- Transkriptionsfehler im englischen Original darfst du stillschweigend\n  korrigieren, wenn du dir sicher bist.\n- Unverständliche Passagen kennzeichne mit [unverständlich].\n- Gib ausschließlich die deutsche Übersetzung aus — keine Kommentare,\n  keine Erklärungen, kein Originaltext."
+            },
+            {
+              "content": "=<transkript>\n{{ $json.data }}\n</transkript>"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 8096
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        800,
+        96
+      ],
+      "id": "4696f33a-ec02-4ef6-8de2-d7861c2cb6f0",
+      "name": "Translate EN -> DE",
+      "credentials": {
+        "anthropicApi": {
+          "id": "V22chuhf2A4iwgWk",
+          "name": "Anthropic API Key transcription workflow"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8eefca77-e88f-41a8-9609-aaa24d3834be",
+              "name": "transcript_de",
+              "value": "={{ $json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        928,
+        -96
+      ],
+      "id": "8bff05da-dccf-4e48-a2e1-dcd3cdcfb950",
+      "name": "Rename output to transcript_de (1)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b5bf4b16-68e7-4c63-b41a-640fec3c158a",
+              "name": "transcript_de",
+              "value": "={{ $json.content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "48a22103-5307-4d0a-9e25-2fc4060e9487",
+      "name": "Rename output to transcript_de (2)"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "content[0].text",
+        "binaryPropertyName": "summary",
+        "options": {
+          "fileName": "={{ $('On form submission').item.json['audioFile'][0].filename.split('.')[0] }}_summary.md"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        -96
+      ],
+      "id": "bcfd8daf-1fcb-4bf6-acd3-0191e0a58778",
+      "name": "Create a Markdown file"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://md2pdf:3000/convert",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "markdown",
+              "value": "={{ $json.content[0].text }}"
+            },
+            {
+              "name": "filename",
+              "value": "={{ $('On form submission').item.json['audioFile'][0].filename.split('.')[0] }}_summary.pdf"
+            },
+            {
+              "name": "template",
+              "value": "default.typ"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "summary-pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1760,
+        96
+      ],
+      "id": "05c67d13-8f1c-4276-843d-b6c7e23d5622",
+      "name": "Create PDF from Markdown"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "transcript_de",
+        "binaryPropertyName": "=transcript_de_file",
+        "options": {
+          "fileName": "={{ $('On form submission').item.json['audioFile'][0].filename.split('.')[0] }}_transkript.txt"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1584,
+        -560
+      ],
+      "id": "23f8268d-7926-4a19-92f9-8c501dc40fb7",
+      "name": "Store transcript as txt file",
+      "alwaysOutputData": false,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2048,
+        -112
+      ],
+      "id": "35bf9c47-58f2-487c-87b8-e350a62a21bb",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst binary = {};\nlet i = 0;\n\nfor (const item of allItems) {\n  for (const key in item.binary) {\n    binary['attachment_' + i] = item.binary[key];\n    i++;\n  }\n}\n\nreturn [{ json: { attachmentCount: i }, binary }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -96
+      ],
+      "id": "a53acb73-5447-4924-98db-f66e933fefdc",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "formTitle": "File Transcription Upload",
+        "formDescription": "You can use this form to upload audio files for transcription.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Audio file",
+              "fieldType": "file",
+              "fieldName": "audioFile"
+            },
+            {
+              "fieldLabel": "Language",
+              "fieldType": "dropdown",
+              "fieldName": "language",
+              "defaultValue": "de",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "de"
+                  },
+                  {
+                    "option": "en"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Send the file to Telegram?",
+              "fieldType": "checkbox",
+              "fieldName": "sendToTelegram",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Send to Telegram"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "path": "predigt-zusammenfassung"
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -880,
+        -80
+      ],
+      "id": "4ba3d138-5ea0-4830-b385-b9d1385aa95c",
+      "name": "On form submission",
+      "webhookId": "0585fb3d-0833-448e-ae09-14979e4db954"
+    },
+    {
+      "parameters": {
+        "content": "## Transcribing the audio with Whisper AI model\nCurrently the **Infomaniak API** is used to call Whisper\nInfomaniak only offers batch calls, therefore we call the API endpoint for the results as often as it is available.",
+        "height": 592,
+        "width": 864,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -336,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "e30c8c93-5e4e-4cba-ac2f-b4488e9cbad9",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Translating the transcript if language is English\n\nAt the end of this section a German transcript is available.",
+        "height": 592,
+        "width": 720,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "03c3a958-100e-4773-b4ab-595dd827868e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Pre-processing\nThe audio file is downsampled to reduce file size.\n\nThe sampling rate is `16 kHz mono 32k` which is what Whisper is using internally anyway.",
+        "height": 592,
+        "width": 320,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -704,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "93b08678-8ac3-4b46-884a-9d4c84acaf7c",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Summarising the transcript\nThe transcript is summarised by LLM using a system and user prompt to ensure consistent results. The output is a markdown string.\n\nThe markdown is converted into a binary file (`.md`) and into a PDF. The PDF creation is done with pandoc and Typst using a template file. That way the layout can be easily controlled and changed.",
+        "height": 592,
+        "width": 592,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1344,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "215a4702-64e7-4f6e-a75d-e007e37f3762",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Converting the transcript into TXT file\nThe transcript is converted into a .txt file that can be send.",
+        "height": 288,
+        "width": 592,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1344,
+        -656
+      ],
+      "typeVersion": 1,
+      "id": "8979655e-3c83-4ae5-b6d8-88909243f5df",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Collecting all binaries and sending them via mail\n",
+        "height": 592,
+        "width": 640,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1984,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "a4ff5479-d41d-4758-a2ed-a92977064647",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Sending PDF summary to Telegram \nOnly sending PDF to Telegram if option was selected in upload form.",
+        "height": 272,
+        "width": 640,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1984,
+        320
+      ],
+      "typeVersion": 1,
+      "id": "599b95c4-d71c-47d5-a4f6-0e167637eabc",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "binaryData": true,
+        "binaryPropertyName": "summary-pdf",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2384,
+        416
+      ],
+      "id": "99e0f5dc-7030-403d-aef7-2eed1d1e517f",
+      "name": "Send PDF to Telegram",
+      "webhookId": "c1455963-f8ac-4b85-9313-511e975ba114",
+      "credentials": {
+        "telegramApi": {
+          "id": "UgHvlMnLvlQUpEXp",
+          "name": "YOUR_TELEGRAM_BOT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cbcd649c-f252-48d0-93c4-3e6dc8ab736a",
+              "leftValue": "={{ $('On form submission').item.json.sendToTelegram }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2096,
+        416
+      ],
+      "id": "04300fe8-2737-4557-9773-b1fd6d5d6a6c",
+      "name": "Send to Telegram enabled?"
+    }
+  ],
+  "pinData": {
+  },
+  "connections": {
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Fetch transcription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Downsample file": {
+      "main": [
+        [
+          {
+            "node": "Send file to Whisper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send file to Whisper": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch transcription": {
+      "main": [
+        [
+          {
+            "node": "Check if data is empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarise": {
+      "main": [
+        [
+          {
+            "node": "Create a Markdown file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create PDF from Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send summary as Markdown file": {
+      "main": [
+        []
+      ]
+    },
+    "Check if data is empty": {
+      "main": [
+        [
+          {
+            "node": "Language check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Language check": {
+      "main": [
+        [
+          {
+            "node": "Rename output to transcript_de (1)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Translate EN -> DE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Translate EN -> DE": {
+      "main": [
+        [
+          {
+            "node": "Rename output to transcript_de (2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename output to transcript_de (1)": {
+      "main": [
+        [
+          {
+            "node": "Summarise",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Store transcript as txt file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename output to transcript_de (2)": {
+      "main": [
+        [
+          {
+            "node": "Summarise",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Store transcript as txt file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a Markdown file": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Create PDF from Markdown": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 2
+          },
+          {
+            "node": "Send to Telegram enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store transcript as txt file": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send summary as Markdown file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Downsample file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram enabled?": {
+      "main": [
+        [
+          {
+            "node": "Send PDF to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Copenhagen",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "5442ee29-ee82-45f9-a8ae-db0f6fa93ee6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "276658c3d28daa5e1ea254217bf9b13a1fdb79da1cef7c81796c01cfed31d044"
+  },
+  "id": "AWWXjeE5V1iAhXqS",
+  "tags": []
+}

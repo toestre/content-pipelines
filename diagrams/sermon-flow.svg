@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 200" width="1100" height="200">
+  <title>Sermon Pipeline flow</title>
+  <defs>
+    <style>
+      .box { fill: #e1f5ff; stroke: #2c5282; stroke-width: 1.5; rx: 6; }
+      .svc { fill: #fff3cd; stroke: #b7791f; stroke-width: 1.5; rx: 6; }
+      .box-end { fill: #d4edda; stroke: #276749; stroke-width: 1.5; rx: 6; }
+      .diamond { fill: #edf2f7; stroke: #4a5568; stroke-width: 1.5; }
+      .txt { font-family: system-ui, sans-serif; font-size: 12px; fill: #1a202c; }
+      .arrow { stroke: #4a5568; stroke-width: 2; fill: none; marker-end: url(#ms); }
+    </style>
+    <marker id="ms" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#4a5568"/>
+    </marker>
+  </defs>
+  <rect class="box" x="10" y="75" width="100" height="50"/>
+  <text class="txt" x="60" y="98" text-anchor="middle">n8n Form</text>
+  <text class="txt" x="60" y="112" text-anchor="middle" font-size="10">audio</text>
+  <rect class="svc" x="140" y="75" width="110" height="50"/>
+  <text class="txt" x="195" y="105" text-anchor="middle">Downsampler</text>
+  <rect class="box" x="280" y="75" width="100" height="50"/>
+  <text class="txt" x="330" y="105" text-anchor="middle">Whisper</text>
+  <polygon class="diamond" points="420,100 460,75 500,100 460,125"/>
+  <text class="txt" x="460" y="104" text-anchor="middle" font-size="11">Lang?</text>
+  <rect class="box" x="530" y="40" width="90" height="45"/>
+  <text class="txt" x="575" y="67" text-anchor="middle" font-size="11">LLM EN’DE</text>
+  <rect class="svc" x="520" y="115" width="110" height="50"/>
+  <text class="txt" x="575" y="138" text-anchor="middle" font-size="11">LLM summarize</text>
+  <text class="txt" x="575" y="152" text-anchor="middle" font-size="10">(DE path)</text>
+  <rect class="svc" x="660" y="75" width="120" height="50"/>
+  <text class="txt" x="720" y="105" text-anchor="middle">Typst PDF</text>
+  <rect class="box-end" x="810" y="75" width="100" height="50"/>
+  <text class="txt" x="860" y="105" text-anchor="middle">Email</text>
+  <path class="arrow" d="M110,100 H140"/>
+  <path class="arrow" d="M250,100 H280"/>
+  <path class="arrow" d="M380,100 H415"/>
+  <path class="arrow" d="M460,75 L460,62 H575 V40"/>
+  <text class="txt" x="485" y="55" font-size="10">EN</text>
+  <path class="arrow" d="M460,125 L460,140 H575"/>
+  <text class="txt" x="485" y="138" font-size="10">DE</text>
+  <path class="arrow" d="M620,62 H655 V100 H660"/>
+  <path class="arrow" d="M630,140 H655 V100"/>
+  <path class="arrow" d="M780,100 H810"/>
+</svg>

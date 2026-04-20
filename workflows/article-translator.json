@@ -1,0 +1,792 @@
+{
+  "name": "Translate Theopolis article v3",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -256
+      ],
+      "id": "2d03f039-226c-4ab7-bb0f-3a373534a4ce",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const text = $json[\"markdown\"]; // falls dein Markdown in einem Feld \"markdown\" liegt\n\n// Regex: alles ab erster wirklicher Absatz bis \"Related Media\" oder \"To download\"\nconst match = text.match(/(?:\\*FILED UNDER\\*[\\s\\S]+?\\n\\n)([\\s\\S]*?)(?=\\n\\nRelated Media|\\n\\nTo download)/);\n\nreturn {\n  ...item.json,\n  article: match ? match[1].trim() : null\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -160
+      ],
+      "id": "da782b22-90ce-462e-b60c-db8359b6f9ec",
+      "name": "First filter stage - extract article roughly"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const text = $json[\"article\"];\n\n// Alles ab dem ersten Absatz, der mit Großbuchstabe startet\nconst cleanStart = text.replace(/^[\\s\\S]*?\\n\\n([A-Z][\\s\\S]*)/, \"$1\");\n\n// Alles bis vor \"* * *\" oder dem Autor-Absatz\nconst match = cleanStart.match(/([\\s\\S]*?)(?=\\n\\n\\* \\* \\*|\\n\\n_[A-Z][\\s\\S]*_|\\n\\n\\[Consumerism|\\n\\nRelated Media|\\n\\nTo download)/);\n\nreturn {\n  ...item.json,\n  article: match ? match[1].trim() : cleanStart.trim()\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        -160
+      ],
+      "id": "4743a3eb-8158-4549-bfb1-428059f4a3cc",
+      "name": "Second filter stage - extract article exactly"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.datetime }}",
+        "format": "yyyy-MM-dd",
+        "outputFieldName": "date",
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        768,
+        -160
+      ],
+      "id": "90f89ea8-3394-443b-acf9-8ca0ae1943a0",
+      "name": "Extract date from datetime"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "df620e9d-ade6-4a12-9e5c-b4ce620005b1",
+              "name": "title",
+              "value": "={{ $json.data.metadata.title }}",
+              "type": "string"
+            },
+            {
+              "id": "c9c5d1fa-5083-42e5-9254-6559cee49432",
+              "name": "author",
+              "value": "={{ $json.data.metadata.author }}",
+              "type": "string"
+            },
+            {
+              "id": "b56f6f15-860d-40f0-a921-df2e28da1614",
+              "name": "datetime",
+              "value": "={{ $json.data.metadata.publishedTime }}",
+              "type": "string"
+            },
+            {
+              "id": "822520bc-1a1d-4fa6-9bc2-339ac9f7b1ea",
+              "name": "url",
+              "value": "={{ $json.data.metadata.url }}",
+              "type": "string"
+            },
+            {
+              "id": "d66ce23c-1ae0-400a-9577-c2ecb6fcfc88",
+              "name": "markdown",
+              "value": "={{ $json.data.markdown }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        544,
+        -160
+      ],
+      "id": "f0dad40a-e808-41ca-abf1-e541d23e9aa0",
+      "name": "Extract relevant fields from scrape result"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ad20b881-ede1-4065-b2ad-5d259c9ffd74",
+              "name": "query.url",
+              "value": "https://theopolisinstitute.com/getting-the-translation-right/",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        96,
+        -256
+      ],
+      "id": "6f5b8b07-bf2f-489c-a5a0-ff6d6225064c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b15dd5b4-9493-4df9-a9f5-a27eb1a171a3",
+              "name": "author",
+              "value": "={{ $json.author }}",
+              "type": "string"
+            },
+            {
+              "id": "9d96f1f4-25c9-4869-abec-7fad3786948a",
+              "name": "date",
+              "value": "={{ $json.date }}",
+              "type": "string"
+            },
+            {
+              "id": "cd90e34e-5721-4c85-92a9-52983fa32ff9",
+              "name": "url",
+              "value": "={{ $json.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        -352
+      ],
+      "id": "2e0c803f-59d0-468d-92a4-e548e73a0091",
+      "name": "Metadata fields"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2320,
+        -256
+      ],
+      "id": "47f3ef5b-1c90-413c-a597-6f20dce41fb5",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "markdownContent",
+        "binaryPropertyName": "=data",
+        "options": {
+          "encoding": "utf8",
+          "fileName": "={{ $json.slug }}.md"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3280,
+        -160
+      ],
+      "id": "ce1f66cf-02c5-4f08-ba77-842991027baf",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: items.reduce((acc, item) => {\n    Object.assign(acc, item.json);\n    return acc;\n  }, {})\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2832,
+        -160
+      ],
+      "id": "c8267b27-d981-404b-9464-27d6818864ed",
+      "name": "Flatten JSON structure"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const {\n    titleGerman = \"Ohne Titel\",\n    author = \"Unbekannt\",\n    date = new Date().toISOString(),\n    url = '',\n    slug = titleGerman.toLowerCase().replace(/\\s+/g, '-').replace(/[^\\w-]/g, ''),\n    articleGerman = ''\n  } = item.json;\n  \n  const yaml = [\n    '---',\n    `title: \"${titleGerman.replace(/\"/g, '\\\\\"')}\"`,\n    `author: \"${author.replace(/\"/g, '\\\\\"')}\"`,\n    `date: \"${date}\"`,\n    `showdate: true`,\n    `slug: \"${slug}\"`,\n    `weight: 1000`,\n    `tags: []`,\n    `books: []`,\n    `draft: false`,\n    '---'\n  ].join('\\n');\n\n  const mdLink = `[Theopolis Institute](${url})`\n  \n  const markdown = `${yaml}\\n\\n${articleGerman.trim()}\\n\\n${mdLink}}`;\n\n  return {\n    json: {\n      ...item.json,\n      slug,\n      markdownContent: markdown\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3056,
+        -160
+      ],
+      "id": "19d38219-6391-4afd-90d1-d393536cbc2b",
+      "name": "Build MD file output"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.4-nano-2026-03-17",
+          "mode": "list",
+          "cachedResultName": "GPT-5.4-NANO-2026-03-17"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Übersetze diese Titelzeile ins Deutsche und entferne den String \"Theopolis Institute\". Beachte die korrekte Groß-/Kleinschreibung im Deutschen.\n\n{{ $json.title }}"
+            },
+            {
+              "content": "Theologische Inhalte werden lebendig, zugänglich und reflektiert vermittelt.",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1664,
+        -160
+      ],
+      "id": "5f706f6c-c6dc-4984-8f3c-85c2e21516bd",
+      "name": "Translate title",
+      "credentials": {
+        "openAiApi": {
+          "id": "4E8EsCTSRoXwViHR",
+          "name": "OpenAi translate key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5.4",
+          "mode": "list",
+          "cachedResultName": "GPT-5.4"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Übersetze den Text ins Deutsche:\n\n {{ $json.article }}"
+            },
+            {
+              "content": "Theologische Inhalte werden lebendig, zugänglich und reflektiert vermittelt. Die Antwort enthält nur die Übersetzung und keine weiteren Kommentare und Anmerkungen.",
+              "role": "system"
+            },
+            {
+              "content": "Formatiere den übersetzten Text in Markdown so wie das Original. Verwende Guillemots »« als Anführungszeichen.",
+              "role": "system"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1664,
+        32
+      ],
+      "id": "88672e76-f7e5-4f8a-99f8-97509d898f6c",
+      "name": "Translate article",
+      "credentials": {
+        "openAiApi": {
+          "id": "4E8EsCTSRoXwViHR",
+          "name": "OpenAi translate key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "657f724f-a4b6-4a45-88cf-418da596eb2f",
+              "name": "titleGerman",
+              "value": "={{ $json.message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        -160
+      ],
+      "id": "4023ed1a-bb2d-4947-929a-f6e86dabe89b",
+      "name": "Title field"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ba43510-1f8f-4949-8d5a-3b52fa3d9bb2",
+              "name": "articleGerman",
+              "value": "={{ $json.message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        32
+      ],
+      "id": "5df9449a-edcd-4673-8e14-0f11be3a830b",
+      "name": "Article content field"
+    },
+    {
+      "parameters": {
+        "formTitle": "Theopolis Artikel Übersetzer",
+        "formDescription": "Dieses Form ist ein einfaches Frontend zur automatisierten Übersetzung von Artikeln auf TheopolisInsitute.com.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "URL",
+              "placeholder": "https://theopolisinstitute.com/",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "path": "theopolis-article-translation"
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        32,
+        0
+      ],
+      "id": "c949700b-9b48-4be3-bb98-06137de59ac2",
+      "name": "On form submission",
+      "webhookId": "7d53090c-f132-450e-8628-54400e2478de"
+    },
+    {
+      "parameters": {
+        "fromEmail": "sendfrom@yourdomain.com",
+        "toEmail": "sendto@yourdomain.com",
+        "subject": "=Übersetzter Artikel: {{ $('Build MD file output').item.json.titleGerman }}",
+        "emailFormat": "text",
+        "text": "n8n Translation workflow triggered by form submission. Translated file attached.\n\nEnjoy this article!",
+        "options": {
+          "attachments": "data"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3536,
+        -160
+      ],
+      "id": "d35ae2cf-de04-417b-9810-b8d3ad8627f8",
+      "name": "Send email",
+      "webhookId": "f9d635b8-a244-4ac6-ac08-15fa538f1428",
+      "credentials": {
+        "smtp": {
+          "id": "nTxNBakLMZ8ZoeSe",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2608,
+        -160
+      ],
+      "id": "c1df4e26-9335-4bf5-8722-f986c2e96518",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "amount": 6
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1504,
+        32
+      ],
+      "id": "d1cd4397-0b5e-4690-9470-bc1cced09812",
+      "name": "Wait",
+      "webhookId": "de8db8d2-b261-4a08-9d81-b47f0a77bd18"
+    },
+    {
+      "parameters": {
+        "content": "## Web Scraper\nExtract content provided URL",
+        "height": 496,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        272,
+        -448
+      ],
+      "typeVersion": 1,
+      "id": "5466103d-901f-42de-a6e1-8dda0dc89fb7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "scrape",
+        "url": "={{ $json.URL }}",
+        "requestOptions": {}
+      },
+      "type": "@mendable/n8n-nodes-firecrawl.firecrawl",
+      "typeVersion": 1,
+      "position": [
+        320,
+        -160
+      ],
+      "id": "4f13e9b4-58ac-4c9c-8933-a1b3330fd9fc",
+      "name": "Scrape a url and get its content",
+      "credentials": {
+        "firecrawlApi": {
+          "id": "9t9YWl8Dx9MlzBgP",
+          "name": "Firecrawl account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Web Scraper\nExtract article text, title, author, date from the URL.\nConvert date format.\nClean up article text.",
+        "height": 496,
+        "width": 912,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        480,
+        -448
+      ],
+      "typeVersion": 1,
+      "id": "6d500d46-ee2f-4d84-b5ca-220561e76d87",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Translate Title\nSend titla and article to LLMs separately (smaller LLM for title translation, more sophisticated LLM for article itself). Get the data back as Markdown.",
+        "height": 624,
+        "width": 480,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1456,
+        -448
+      ],
+      "typeVersion": 1,
+      "id": "186c31ff-396a-4173-a19e-c636244e2aa7",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Normalise Field Names and Merge paths\nGive data from all paths meaningful and unique names.",
+        "height": 624,
+        "width": 976,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2000,
+        -448
+      ],
+      "typeVersion": 1,
+      "id": "8bc3174b-5877-430e-a132-cd4c8f6e3c03",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Build Markdown file\nBuild final markdown file with YAML frontmatter from all elements. Convert markdown string to a binary file.",
+        "height": 624,
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2992,
+        -448
+      ],
+      "typeVersion": 1,
+      "id": "569c1016-a66f-4e6b-b8e5-0f00ff7195f6",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Send file by mail",
+        "height": 624,
+        "width": 256,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3456,
+        -448
+      ],
+      "typeVersion": 1,
+      "id": "44f32098-b3eb-4eb7-8882-89b9d608b2da",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Path for manual testing\nHardcoded URL for quick test purposes.",
+        "height": 304,
+        "width": 432,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        -384
+      ],
+      "typeVersion": 1,
+      "id": "8e988aa2-9bac-41e5-9dc9-8347a2899d91",
+      "name": "Sticky Note8"
+    }
+  ],
+  "pinData": {
+  },
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First filter stage - extract article roughly": {
+      "main": [
+        [
+          {
+            "node": "Second filter stage - extract article exactly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract date from datetime": {
+      "main": [
+        [
+          {
+            "node": "First filter stage - extract article roughly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract relevant fields from scrape result": {
+      "main": [
+        [
+          {
+            "node": "Extract date from datetime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Scrape a url and get its content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Second filter stage - extract article exactly": {
+      "main": [
+        [
+          {
+            "node": "Translate title",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Metadata fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metadata fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten JSON structure": {
+      "main": [
+        [
+          {
+            "node": "Build MD file output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build MD file output": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Translate title": {
+      "main": [
+        [
+          {
+            "node": "Title field",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Translate article": {
+      "main": [
+        [
+          {
+            "node": "Article content field",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Title field": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Article content field": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Scrape a url and get its content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Flatten JSON structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Translate article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape a url and get its content": {
+      "main": [
+        [
+          {
+            "node": "Extract relevant fields from scrape result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a5a0d6a4-1abf-419b-87f4-08ae575fa4de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "276658c3d28daa5e1ea254217bf9b13a1fdb79da1cef7c81796c01cfed31d044"
+  },
+  "id": "yxAoklsqE6rG7jRk",
+  "tags": []
+}

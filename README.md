@@ -13,7 +13,7 @@ Two n8n workflows that turn messy inputs — URLs, audio files — into clean, s
 | Workflow | Input | Output | What it's good for |
 |---|---|---|---|
 | [**Article Translator**](#1-article-translator) | URL to an EN article | DE markdown with YAML frontmatter, delivered by email | Turning foreign-language source material into filed, searchable notes |
-| [**Sermon Pipeline**](#2-sermon-pipeline) | Audio file (EN or DE) | Transcript + structured DE summary as `.md` and `.pdf`, delivered by email | Making long-form spoken content into skimmable, archivable documents |
+| [**Sermon Pipeline**](#2-sermon-pipeline) | Audio file (EN or DE) | Transcript + structured DE summary as `.md` and `.pdf`, delivered by email or Telegram | Making long-form spoken content into skimmable, archivable documents |
 
 Both workflows run end-to-end unattended. Submit a form, get the output in your inbox.
 
@@ -56,32 +56,37 @@ The more involved one. Two custom microservices, a transcription step, condition
 
 ```mermaid
 flowchart LR
-    A[n8n Form<br/>audio upload] --> B[Downsampler<br/>microservice]
+    A[n8n Form<br/>audio upload<br/>+ delivery choice] --> B[Downsampler<br/>microservice]
     B --> C[Whisper<br/>transcription]
     C --> D{Language?}
     D -->|EN| E[LLM<br/>translate to DE]
     D -->|DE| F[LLM<br/>summarize]
     E --> F
     F --> G[Typst Renderer<br/>microservice]
-    G --> H[Email<br/>transcript + .md + .pdf]
+    G --> H{Delivery?}
+    H -->|Email| I[Email<br/>transcript + .md + .pdf]
+    H -->|Telegram| J[Telegram<br/>send PDF]
 
     style A fill:#e1f5ff
     style B fill:#fff3cd
     style G fill:#fff3cd
-    style H fill:#d4edda
+    style I fill:#d4edda
+    style J fill:#d4edda
 ```
 
 Yellow = self-built microservices (see [Microservices](#microservices) below).
 
 ### What it does
 
-1. User uploads an audio file (EN or DE) via n8n form
+1. User uploads an audio file (EN or DE) via n8n form and selects a delivery channel (email or Telegram)
 2. **Downsampler** microservice reduces file size for faster/cheaper transcription
 3. Whisper transcribes to text
 4. If source is EN, an LLM translates to DE; otherwise skip
 5. LLM summarizes the transcript following a fixed schema (key points, themes, quotes, scripture references)
 6. **Typst renderer** microservice converts the summary markdown to a typeset PDF
-7. Transcript (`.md`), summary (`.md`), and summary (`.pdf`) are emailed
+7. Delivery branches on the form choice:
+   - **Email** — transcript (`.md`), summary (`.md`), and summary (`.pdf`) as attachments
+   - **Telegram** — summary PDF pushed to a configured chat via bot
 
 ### Sample output
 
@@ -105,54 +110,16 @@ Two small services written for this project, published as container images with 
 
 | Service | Purpose | Repo | Image |
 |---|---|---|---|
-| `audio-downsampler` | Reduce audio bitrate/sample rate before transcription to cut cost and time | [→ repo](#) | `ghcr.io/yourname/audio-downsampler:latest` |
-| `typst-renderer` | Convert markdown to typeset PDF via [Typst](https://typst.app) | [→ repo](#) | `ghcr.io/yourname/typst-renderer:latest` |
+| `audio-downsampler` | Reduce audio bitrate/sample rate before transcription to cut cost and time | [→ repo](https://github.com/toestre/audio-tools) | `ghcr.io/toestre/audio-tools:lates` |
+| `typst-renderer` | Convert markdown to typeset PDF via [Typst](https://typst.app) | [→ repo](https://github.com/toestre/md2pdf) | `ghcr.io/toestre/md2pdf:latest` |
 
 Each has its own README, `curl` example, and GitHub Actions workflow publishing to GHCR on every tag.
-
----
-
-## Running it yourself
-
-### Prerequisites
-
-- Docker + Docker Compose
-- API keys for the LLM provider(s) you want to use (see below)
-- A Firecrawl API key (free tier works for low volume)
-- An SMTP account for email delivery
-
-### Setup
-
-```bash
-git clone https://github.com/yourname/content-pipelines.git
-cd content-pipelines
-cp .env.example .env
-# fill in API keys and SMTP credentials
-docker compose up -d
-```
-
-Open `http://localhost:5678`, import `workflows/article-translator.json` and `workflows/sermon-pipeline.json`, and activate them. The forms will be available at the URLs n8n prints in the workflow.
-
-### LLM provider
-
-Both workflows are **provider-agnostic**. The LLM calls are configured via n8n credentials, so you can run them against:
-
-- OpenAI (`gpt-4o`, `gpt-4o-mini`)
-- Anthropic (`claude-sonnet-4`, `claude-haiku-4-5`)
-- Self-hosted via Ollama / vLLM / any OpenAI-compatible endpoint
-- Azure OpenAI
-
-Swap the credential in n8n — no workflow changes needed.
-
----
 
 ## Repo structure
 
 ```
 content-pipelines/
 ├── README.md
-├── docker-compose.yml          # n8n + both microservices, prebuilt images
-├── .env.example                # all required secrets, commented
 ├── workflows/
 │   ├── article-translator.json # exported n8n workflow, secrets scrubbed
 │   └── sermon-pipeline.json
@@ -165,14 +132,6 @@ content-pipelines/
     ├── article-flow.svg
     └── sermon-flow.svg
 ```
-
----
-
-## Notes on security and deployment
-
-- **Secrets:** All API keys live in `.env`, never committed. Workflow JSON exports use n8n credential references (`{{ $credentials... }}`), not literal keys.
-- **Self-hosted n8n:** Workflows run on a private instance, not n8n Cloud. Inputs and outputs never leave infrastructure I control except for the explicit LLM / Firecrawl / SMTP calls.
-- **LLM provider choice:** Because the workflows are provider-agnostic, they can run fully on-premise (Ollama, vLLM behind a VPC) when data sensitivity requires it.
 
 ---
 
