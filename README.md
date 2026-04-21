@@ -107,7 +107,7 @@ Yellow = self-built microservices (see [Microservices](#microservices) below).
 
 ## Demo
 
-> 📹 **60-second walkthrough:** [Article Translator workflow](https://github.com/user-attachments/assets/da65d89d-6f11-4a48-ba38-aad601a88d21)
+> 📹 **60-second walkthrough:** [Article Translator workflow](https://github.com/user-attachments/assets/da65d89d-6f11-4a48-ba38-aad601a88d21) \
 > 📹 **100-second walkthrough:** [Sermon Transcript & Summary workflow](https://github.com/user-attachments/assets/84fe6b23-2371-43be-9943-09b108fbe3a4)
 
 For the faster path, the samples above show exactly what comes out the other end.
