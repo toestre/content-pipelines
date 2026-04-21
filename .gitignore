@@ -1,0 +1,4 @@
+recordings/
+*.mp4
+*.mkv
+.env
